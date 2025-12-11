@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Truck, Clock } from "lucide-react";
-
 const Hero = () => {
-  return (
-    <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden" style={{ background: "var(--gradient-hero)" }}>
+  return <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden" style={{
+    background: "var(--gradient-hero)"
+  }}>
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-20 right-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl" />
@@ -67,15 +67,13 @@ const Hero = () => {
                 <Clock className="w-6 h-6 text-primary" />
               </div>
               <div className="text-left">
-                <p className="font-semibold text-secondary">48hr Delivery</p>
+                <p className="font-semibold text-secondary">24 hr Delivery</p>
                 <p className="text-sm text-muted-foreground">Items returned fast</p>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default Hero;
