@@ -35,6 +35,7 @@ const BookPickup = () => {
     numberOfBoxes: "",
     boxType: "",
     storagePlan: "",
+    servicePlan: "basic",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -152,7 +153,7 @@ const BookPickup = () => {
         email: formData.email.trim() || "not-provided@zipspace.in",
         address: formData.location.trim(),
         storage_plan: storagePlanValue as "economy" | "walk_in_closet" | "store_room" | "premium",
-        service_plan: "basic",
+        service_plan: formData.servicePlan as "basic" | "elite",
         pickup_date: new Date().toISOString().split("T")[0],
         pickup_time_slot: "To be scheduled",
         total_amount: 0, // Will be confirmed by team
@@ -215,6 +216,7 @@ const BookPickup = () => {
                     numberOfBoxes: "",
                     boxType: "",
                     storagePlan: "",
+                    servicePlan: "basic",
                   });
                 }}
               >
@@ -451,9 +453,39 @@ const BookPickup = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.storagePlan && <p className="text-sm text-destructive">{errors.storagePlan}</p>}
+              {errors.storagePlan && <p className="text-sm text-destructive">{errors.storagePlan}</p>}
               </div>
             )}
+
+            {/* Service Plan Selection */}
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-primary" />
+                Service Plan
+              </Label>
+              <RadioGroup
+                value={formData.servicePlan}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, servicePlan: value });
+                }}
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              >
+                <div className={`relative flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-all ${formData.servicePlan === "basic" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+                  <RadioGroupItem value="basic" id="plan_basic" className="mt-1" />
+                  <Label htmlFor="plan_basic" className="cursor-pointer flex-1">
+                    <span className="font-semibold block">Basic Plan</span>
+                    <span className="text-sm text-muted-foreground block">Free - Standard pickup & support</span>
+                  </Label>
+                </div>
+                <div className={`relative flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition-all ${formData.servicePlan === "elite" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}>
+                  <RadioGroupItem value="elite" id="plan_elite" className="mt-1" />
+                  <Label htmlFor="plan_elite" className="cursor-pointer flex-1">
+                    <span className="font-semibold block">Elite Plan</span>
+                    <span className="text-sm text-muted-foreground block">₹1,799/month - Priority pickup, photo inventory, climate control</span>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
 
             {/* Submit Button */}
             <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
