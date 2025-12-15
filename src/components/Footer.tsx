@@ -1,15 +1,13 @@
 import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin } from "lucide-react";
 import logo from "@/assets/zipspace-logo.png";
-
 const Footer = () => {
-  return (
-    <footer className="bg-secondary text-secondary-foreground">
+  return <footer className="bg-secondary text-secondary-foreground">
       <div className="container-tight mx-auto section-padding">
         <div className="grid md:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="md:col-span-1">
-            <img src={logo} alt="ZipSpace" className="h-12 w-auto mb-4 brightness-0 invert" />
+            <img alt="ZipSpace" className="h-12 w-auto mb-4 brightness-0 invert" src="/lovable-uploads/fd9e2680-57a4-47df-86f3-376980d8d12b.png" />
             <p className="text-secondary-foreground/70 text-sm">
               Premium storage solutions for your belongings. Secure, accessible, and affordable.
             </p>
@@ -89,8 +87,6 @@ const Footer = () => {
           <p>© {new Date().getFullYear()} ZipSpace. All rights reserved.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
