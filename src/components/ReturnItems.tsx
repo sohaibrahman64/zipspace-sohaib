@@ -196,9 +196,25 @@ const ReturnItems = () => {
           <p className="text-muted-foreground text-lg mb-10">Need your items back? Verify your email and select items for delivery. Items are typically delivered within 24 hours.</p>
 
           {!isVerified ? <div className="bg-card rounded-2xl p-8 shadow-soft border border-border">
-              <form onSubmit={(e) => {
+              <form onSubmit={async (e) => {
                 e.preventDefault();
-                navigate("/return-thank-you");
+                setIsLoading(true);
+                try {
+                  const { error } = await supabase.functions.invoke("send-return-notification", {
+                    body: { email, mobileNumber }
+                  });
+                  if (error) throw error;
+                  navigate("/return-thank-you");
+                } catch (error: any) {
+                  console.error("Error sending return notification:", error);
+                  toast({
+                    title: "Submission Failed",
+                    description: error.message || "Please try again.",
+                    variant: "destructive"
+                  });
+                } finally {
+                  setIsLoading(false);
+                }
               }}>
                 <div className="space-y-4">
                   <div className="space-y-2 text-left">
@@ -217,7 +233,8 @@ const ReturnItems = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={!email || mobileNumber.length !== 10}>
+                  <Button type="submit" className="w-full" disabled={!email || mobileNumber.length !== 10 || isLoading}>
+                    {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                     Submit
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
