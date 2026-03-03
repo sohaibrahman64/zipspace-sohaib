@@ -37,8 +37,50 @@ const BookPickup = () => {
     storagePlan: "",
     servicePlan: "basic",
     storageDuration: "",
+    floorNumber: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const getAddressFromCoordinates = async (latitude: number, longitude: number) => {
+    const query = new URLSearchParams({
+      format: "jsonv2",
+      lat: latitude.toString(),
+      lon: longitude.toString(),
+      zoom: "18",
+      addressdetails: "1",
+      "accept-language": "en",
+    });
+
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query.toString()}`, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Reverse geocoding failed");
+    }
+
+    const data = await response.json();
+
+    const address = data?.address ?? {};
+    const houseNumber = address.house_number as string | undefined;
+    const road = (address.road || address.pedestrian || address.residential || address.footway) as string | undefined;
+    const neighbourhood = (address.neighbourhood || address.suburb || address.city_district) as string | undefined;
+    const city = (address.city || address.town || address.village || address.municipality) as string | undefined;
+    const state = address.state as string | undefined;
+    const postcode = address.postcode as string | undefined;
+
+    const streetLine = [houseNumber, road].filter(Boolean).join(" ").trim();
+    const localityLine = [neighbourhood, city, state, postcode].filter(Boolean).join(", ").trim();
+    const formattedAddress = [streetLine, localityLine].filter(Boolean).join(", ").trim();
+
+    return {
+      displayName: (data?.display_name as string | undefined) ?? "",
+      formattedAddress,
+      hasStreetLevel: Boolean(road || houseNumber),
+    };
+  };
 
   const validatePhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, "");
@@ -93,7 +135,7 @@ const BookPickup = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleUseLocation = () => {
+  const handleUseLocation = async () => {
     if (!navigator.geolocation) {
       toast({
         title: "Geolocation not supported",
@@ -103,28 +145,104 @@ const BookPickup = () => {
       return;
     }
 
+    if (!window.isSecureContext) {
+      toast({
+        title: "Secure connection required",
+        description: "Location access works only on HTTPS or localhost. Please open the site in a secure context.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (navigator.permissions?.query) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: "geolocation" });
+        if (permissionStatus.state === "denied") {
+          toast({
+            title: "Location Permission Denied",
+            description: "Please enable location access for this site in your browser settings and try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch {
+        // Continue with geolocation request even if permission query is unavailable
+      }
+    }
+
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
+
+        const accuracy = position.coords.accuracy;
+
+        let locationText = `Location detected (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+        let description = "We couldn't fetch the full address, but coordinates were added.";
+
+        try {
+          const resolvedAddress = await getAddressFromCoordinates(latitude, longitude);
+          if (resolvedAddress.formattedAddress) {
+            if (resolvedAddress.hasStreetLevel) {
+              locationText = resolvedAddress.formattedAddress;
+              description = "Address detected and filled automatically.";
+            } else {
+              locationText = resolvedAddress.displayName || resolvedAddress.formattedAddress;
+              description = "Only approximate location was detected. Please add house/flat details manually.";
+            }
+          } else if (resolvedAddress.displayName) {
+            locationText = resolvedAddress.displayName;
+          }
+
+          if (accuracy > 200) {
+            description = "Location appears approximate. Please add house/flat details manually.";
+          }
+        } catch {
+          // Keep coordinate fallback when reverse geocoding fails
+        }
+
         setFormData((prev) => ({
           ...prev,
-          location: `Location detected (${latitude.toFixed(4)}, ${longitude.toFixed(4)}) - We'll confirm exact address`,
+          location: locationText,
         }));
         setErrors((prev) => ({ ...prev, location: "" }));
         setIsLocating(false);
         toast({
           title: "Location Detected",
-          description: "We'll confirm your exact address when we call.",
+          description,
         });
       },
-      () => {
+      (error) => {
         setIsLocating(false);
+
+        let title = "Unable to Detect Location";
+        let description = "Please enter your address manually.";
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            title = "Location Permission Denied";
+            description = "Please allow location permission in browser settings and try again.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            title = "Location Unavailable";
+            description = "Your device couldn't determine location. Please check GPS/network and try again.";
+            break;
+          case error.TIMEOUT:
+            title = "Location Request Timed Out";
+            description = "It took too long to get location. Please try again.";
+            break;
+        }
+
         toast({
-          title: "Location Access Denied",
-          description: "Please enter your address manually.",
+          title,
+          description,
           variant: "destructive",
         });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 0,
       }
     );
   };
@@ -144,7 +262,7 @@ const BookPickup = () => {
 
     try {
       // For store boxes, we use economy plan as default
-      const storagePlanValue = formData.serviceType === "store_boxes" ? "economy" : 
+      const storagePlanValue = formData.serviceType === "store_boxes" || formData.serviceType === "office_documents" ? "economy" : 
         (formData.storagePlan === "custom" ? "premium" : formData.storagePlan);
 
       // Insert booking into database
@@ -164,7 +282,7 @@ const BookPickup = () => {
       if (bookingError) throw bookingError;
 
       // Send notification email
-      await supabase.functions.invoke("send-booking-notification", {
+      const { error: notificationError } = await supabase.functions.invoke("send-booking-notification", {
         body: {
           customerName: formData.name,
           email: formData.email || "not-provided@zipspace.in",
@@ -176,8 +294,11 @@ const BookPickup = () => {
           boxType: formData.boxType,
           servicePlan: formData.servicePlan,
           storageDuration: formData.storageDuration,
+          floorNumber: formData.floorNumber,
         },
       });
+
+      if (notificationError) throw notificationError;
 
       setIsSubmitted(true);
     } catch (error: any) {
@@ -221,6 +342,7 @@ const BookPickup = () => {
                     storagePlan: "",
                     servicePlan: "basic",
                     storageDuration: "",
+                    floorNumber: "",
                   });
                 }}
               >
@@ -369,6 +491,10 @@ const BookPickup = () => {
                   <RadioGroupItem value="storage_plan" id="storage_plan" />
                   <Label htmlFor="storage_plan" className="cursor-pointer font-normal">Storage Plan</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="office_documents" id="office_documents" />
+                  <Label htmlFor="office_documents" className="cursor-pointer font-normal">Office Documents</Label>
+                </div>
               </RadioGroup>
               {errors.serviceType && <p className="text-sm text-destructive">{errors.serviceType}</p>}
             </div>
@@ -513,6 +639,31 @@ const BookPickup = () => {
                   <SelectItem value="6_months">6 Months</SelectItem>
                   <SelectItem value="1_year">1 Year</SelectItem>
                   <SelectItem value="more_than_1_year">More than 1 Year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="floorNumber" className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-primary" />
+                Select Floor Number
+              </Label>
+              <Select
+                value={formData.floorNumber}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, floorNumber: value });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select floor number" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((floor) => (
+                    <SelectItem key={floor} value={floor.toString()}>
+                      {floor}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="10_plus">10+</SelectItem>
                 </SelectContent>
               </Select>
             </div>
