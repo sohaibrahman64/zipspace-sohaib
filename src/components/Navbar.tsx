@@ -6,9 +6,6 @@ import logo from "@/assets/zipspace-icon.png";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navLinks = [{
-    href: "#subscriptions",
-    label: "Plans"
-  }, {
     href: "#pricing",
     label: "Pricing"
   }, {
@@ -17,6 +14,9 @@ const Navbar = () => {
   }, {
     href: "#return-items",
     label: "Return Items"
+  }, {
+    href: "#testimonials",
+    label: "Testimonials"
   }];
   return <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
       <div className="container-tight mx-auto px-4 md:px-8">

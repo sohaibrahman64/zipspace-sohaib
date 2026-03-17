@@ -55,7 +55,7 @@ const Testimonials = () => {
   };
 
   return (
-    <section className="section-padding bg-background">
+    <section id="testimonials" className="section-padding bg-background">
       <div className="container-tight mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
