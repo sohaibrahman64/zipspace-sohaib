@@ -3,10 +3,22 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigins = [
+    "https://zipspace.netlify.app",
+    "https://www.zipspace.in",
+    "https://zipspace.in",
+    "http://localhost:8080",
+    "https://localhost:8080",
+  ];
+  const allowOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
 
 const ADMIN_EMAILS = ["support@zipspace.in", "admin@zipspace.in", "hhinduja@gmail.com"];
 
@@ -29,8 +41,10 @@ const boxTypeNames: Record<string, string> = {
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
@@ -103,12 +117,16 @@ serve(async (req) => {
           <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Service Plan:</td>
           <td style="padding: 10px; border-bottom: 1px solid #eee;">${servicePlanNames[servicePlan] || servicePlan || "Basic"}</td>
         </tr>
-        ${storageDuration ? `
+        ${
+          storageDuration
+            ? `
         <tr>
           <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Storage Duration:</td>
           <td style="padding: 10px; border-bottom: 1px solid #eee;">${storageDuration}</td>
         </tr>
-        ` : ""}
+        `
+            : ""
+        }
       </table>
     `;
 
@@ -159,15 +177,15 @@ serve(async (req) => {
 
     console.log("Booking notification emails sent successfully");
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: any) {
     console.error("Error in send-booking-notification function:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
