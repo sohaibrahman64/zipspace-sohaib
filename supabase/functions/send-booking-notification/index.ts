@@ -3,22 +3,10 @@ import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-function getCorsHeaders(origin: string | null) {
-  const allowedOrigins = [
-    "https://zipspace.netlify.app",
-    "https://www.zipspace.in",
-    "https://zipspace.in",
-    "http://localhost:8080",
-    "https://localhost:8080",
-  ];
-  const allowOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-  return {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const ADMIN_EMAILS = ["support@zipspace.in", "admin@zipspace.in", "hhinduja@gmail.com"];
 
@@ -41,10 +29,8 @@ const boxTypeNames: Record<string, string> = {
 };
 
 serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
