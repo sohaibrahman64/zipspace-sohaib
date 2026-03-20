@@ -119,7 +119,7 @@ serve(async (req) => {
     // Send email to admin(s) - this is the primary notification
     console.log("Sending email to admins:", ADMIN_EMAILS);
     const adminEmailResult = await resend.emails.send({
-      from: "ZipSpace <onboarding@resend.dev>",
+      from: "ZipSpace <support@mail.zipspace.in>",
       to: ADMIN_EMAILS,
       subject: `New Booking Request - ${customerName}`,
       html: `
