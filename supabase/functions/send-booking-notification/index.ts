@@ -48,6 +48,7 @@ serve(async (req) => {
       numberOfBoxes,
       boxType,
       storageDuration,
+      insurance,
     } = booking;
 
     // Build booking details based on service type
@@ -113,6 +114,16 @@ serve(async (req) => {
         `
             : ""
         }
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Insurance Opted:</td>
+          <td style="padding: 10px; border-bottom: 1px solid #eee;">${
+            insurance === undefined || insurance === ""
+              ? "Not specified"
+              : insurance === "Yes"
+                ? "Yes (Starting from ₹149)"
+                : "No"
+          }</td>
+        </tr>
       </table>
     `;
 
